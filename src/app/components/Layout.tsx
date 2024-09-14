@@ -1,5 +1,7 @@
 import React from 'react';
+import { ThemeProvider } from 'next-themes';
 import Navbar from './Navbar';
+import Footer from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -7,15 +9,15 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-grow">
-        {children}
-      </main>
-      <footer className="bg-gray-200 p-4 text-center dark:bg-gray-800 dark:text-white">
-        © 2023 Student Resource Sharing Platform
-      </footer>
-    </div>
+    <ThemeProvider attribute="class">
+      <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+        <Navbar />
+        <main className="flex-grow">
+          {children}
+        </main>
+        <Footer />
+      </div>
+    </ThemeProvider>
   );
 };
 
