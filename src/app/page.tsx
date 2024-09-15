@@ -11,7 +11,7 @@ export default function Home() {
             <div className="mb-8 sm:mb-0">
               <h1 className="text-5xl sm:text-6xl font-extrabold text-gray-900 dark:text-white mb-6">
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-teal-400">
-                  EduShare
+                  StudyShare
                 </span>
                 <br />
                 Learn Together
@@ -42,7 +42,7 @@ export default function Home() {
 
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">How It Works</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-16">
-            {[
+            {[ 
               { title: "Share Resources", icon: BookOpen, description: "Upload and share your notes, assignments, and projects with fellow students." },
               { title: "Discover Content", icon: Search, description: "Find valuable study materials shared by your peers across various subjects." },
               { title: "Collaborate", icon: Users, description: "Interact with other students through comments, ratings, and bookmarks." }
@@ -59,7 +59,7 @@ export default function Home() {
 
           <div className="bg-blue-600 text-white rounded-3xl p-8 sm:p-12 text-center">
             <h2 className="text-3xl font-bold mb-4">Ready to boost your academic journey?</h2>
-            <p className="text-xl mb-8">Join EduShare today and experience the power of collaborative learning!</p>
+            <p className="text-xl mb-8">Join StudyShare today and experience the power of collaborative learning!</p>
             <Button asChild size="lg" variant="secondary" className="rounded-full">
               <Link href="/signup">Start Sharing Now</Link>
             </Button>

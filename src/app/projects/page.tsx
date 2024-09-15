@@ -1,122 +1,77 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { formatDate } from '@/lib/utils';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Bookmark, MessageSquare, Share2, ThumbsUp } from "lucide-react";
 
-const subjects = ["All Subjects", "Mathematics", "Physics", "Computer Science", "Literature", "History"];
-
 interface Project {
   id: string;
   title: string;
+  description: string;
+  dueDate: Date;
   author: string;
-  authorId: string;
   avatar: string;
   subject: string;
-  description: string;
   likes: number;
   comments: number;
-  createdAt: Date;
+  image?: string;
 }
 
 export default function ProjectsPage() {
-  const [user, loading] = useAuthState(auth);
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("All Subjects");
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchProjects = async () => {
-      if (user) {
-        setIsLoading(true);
-        try {
-          let projectsQuery = query(
-            collection(db, 'posts'),
-            where('type', '==', 'Project'),
-            orderBy('createdAt', 'desc')
-          );
-
-          if (selectedSubject !== "All Subjects") {
-            projectsQuery = query(projectsQuery, where('subject', '==', selectedSubject));
-          }
-
-          const querySnapshot = await getDocs(projectsQuery);
-          const fetchedProjects = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt.toDate(),
-          } as Project));
-
-          setProjects(fetchedProjects);
-        } catch (error) {
-          console.error("Error fetching projects:", error);
-        } finally {
-          setIsLoading(false);
-        }
+      try {
+        const projectsCollection = collection(db, 'projects');
+        const projectsSnapshot = await getDocs(projectsCollection);
+        const projectsList = projectsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          dueDate: doc.data().dueDate.toDate()
+        } as Project));
+        setProjects(projectsList);
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchProjects();
-  }, [user, selectedSubject]);
+  }, []);
 
-  const filteredProjects = projects.filter(project =>
-    project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    project.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (loading || isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user) {
-    return null;
+  if (loading) {
+    return <div className="text-center mt-8">Loading projects...</div>;
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Projects</h1>
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Input
           type="text"
           placeholder="Search projects..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="md:w-1/2"
+          className="flex-grow"
         />
-        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-          <SelectTrigger className="md:w-1/4">
-            <SelectValue>{selectedSubject}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {subjects.map((subject) => (
-              <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button className="md:w-1/4" onClick={() => router.push('/create-project')}>
+        <Button className="sm:w-auto">
           Create Project
         </Button>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredProjects.map((project) => (
-          <Card key={project.id}>
+      <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 [column-width:300px]">
+        {projects.map((project) => (
+          <Card key={project.id} className="mb-6 break-inside-avoid">
             <CardHeader>
               <div className="flex items-center gap-4">
                 <Avatar>
@@ -131,7 +86,15 @@ export default function ProjectsPage() {
             </CardHeader>
             <CardContent>
               <Badge className="mb-2">{project.subject}</Badge>
-              <p className="text-sm text-muted-foreground">{project.description}</p>
+              <p className="text-sm text-muted-foreground mb-4">{project.description}</p>
+              {project.image && (
+                <div className="relative h-48 mb-4">
+                  <img src={project.image} alt={project.title} className="absolute inset-0 w-full h-full object-cover rounded-md" />
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Due: {formatDate(project.dueDate)}
+              </p>
             </CardContent>
             <CardFooter className="flex justify-between">
               <div className="flex space-x-2">

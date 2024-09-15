@@ -50,7 +50,7 @@ export default function AssignmentsPage() {
         try {
           let assignmentsQuery = query(
             collection(db, 'posts'),
-            where('type', '==', 'Assignment'),
+            where('type', '==', 'Assignments'),
             orderBy('createdAt', 'desc')
           );
 
@@ -59,12 +59,15 @@ export default function AssignmentsPage() {
           }
 
           const querySnapshot = await getDocs(assignmentsQuery);
-          const fetchedAssignments = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt.toDate(),
-            dueDate: doc.data().dueDate.toDate(),
-          } as Assignment));
+          const fetchedAssignments = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              dueDate: data.dueDate?.toDate() || null,
+            } as Assignment;
+          });
 
           setAssignments(fetchedAssignments);
         } catch (error) {
@@ -134,7 +137,9 @@ export default function AssignmentsPage() {
             <CardContent>
               <Badge className="mb-2">{assignment.subject}</Badge>
               <p className="text-sm text-muted-foreground">{assignment.description}</p>
-              <p className="text-sm font-semibold mt-2">Due: {assignment.dueDate.toLocaleDateString()}</p>
+              <p className="text-sm font-semibold mt-2">
+                Due: {assignment.dueDate ? assignment.dueDate.toLocaleDateString() : 'No due date'}
+              </p>
             </CardContent>
             <CardFooter className="flex justify-between">
               <div className="flex space-x-2">

@@ -1,122 +1,75 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Bookmark, MessageSquare, Share2, ThumbsUp } from "lucide-react";
-
-const subjects = ["All Subjects", "Mathematics", "Physics", "Computer Science", "Literature", "History"];
+import { Bookmark, MessageSquare, Share2, ThumbsUp, Image as ImageIcon, Video } from "lucide-react";
 
 interface Note {
   id: string;
   title: string;
   author: string;
-  authorId: string;
   avatar: string;
   subject: string;
   description: string;
   likes: number;
   comments: number;
-  createdAt: Date;
+  image?: string;
+  video?: string;
 }
 
 export default function NotesPage() {
-  const [user, loading] = useAuthState(auth);
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("All Subjects");
   const [notes, setNotes] = useState<Note[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchNotes = async () => {
-      if (user) {
-        setIsLoading(true);
-        try {
-          let notesQuery = query(
-            collection(db, 'posts'),
-            where('type', '==', 'Notes'),
-            orderBy('createdAt', 'desc')
-          );
-
-          if (selectedSubject !== "All Subjects") {
-            notesQuery = query(notesQuery, where('subject', '==', selectedSubject));
-          }
-
-          const querySnapshot = await getDocs(notesQuery);
-          const fetchedNotes = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt.toDate(),
-          } as Note));
-
-          setNotes(fetchedNotes);
-        } catch (error) {
-          console.error("Error fetching notes:", error);
-        } finally {
-          setIsLoading(false);
-        }
+      try {
+        const notesCollection = collection(db, 'notes');
+        const notesSnapshot = await getDocs(notesCollection);
+        const notesList = notesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Note));
+        setNotes(notesList);
+      } catch (error) {
+        console.error('Error fetching notes:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchNotes();
-  }, [user, selectedSubject]);
+  }, []);
 
-  const filteredNotes = notes.filter(note =>
-    note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    note.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (loading || isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user) {
-    return null;
+  if (loading) {
+    return <div className="text-center mt-8">Loading notes...</div>;
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Study Notes</h1>
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <Input
           type="text"
           placeholder="Search notes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="md:w-1/2"
+          className="flex-grow"
         />
-        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-          <SelectTrigger className="md:w-1/4">
-            <SelectValue>{selectedSubject}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {subjects.map((subject) => (
-              <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button className="md:w-1/4" onClick={() => router.push('/create-note')}>
+        <Button className="sm:w-auto">
           Upload Notes
         </Button>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredNotes.map((note) => (
-          <Card key={note.id}>
+      <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 [column-width:300px]">
+        {notes.map((note) => (
+          <Card key={note.id} className="mb-6 break-inside-avoid">
             <CardHeader>
               <div className="flex items-center gap-4">
                 <Avatar>
@@ -131,7 +84,19 @@ export default function NotesPage() {
             </CardHeader>
             <CardContent>
               <Badge className="mb-2">{note.subject}</Badge>
-              <p className="text-sm text-muted-foreground">{note.description}</p>
+              <p className="text-sm text-muted-foreground mb-4">{note.description}</p>
+              {note.image && (
+                <div className="relative h-48 mb-4">
+                  <img src={note.image} alt={note.title} className="absolute inset-0 w-full h-full object-cover rounded-md" />
+                </div>
+              )}
+              {note.video && (
+                <div className="relative h-48 mb-4">
+                  <video src={note.video} controls className="absolute inset-0 w-full h-full object-cover rounded-md">
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              )}
             </CardContent>
             <CardFooter className="flex justify-between">
               <div className="flex space-x-2">

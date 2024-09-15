@@ -21,11 +21,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db, storage } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import dynamic from 'next/dynamic';
 
 const subjects = ["All Subjects", "Mathematics", "Physics", "Computer Science", "Literature", "History"];
-const resourceTypes = ["All Types", "Notes", "Assignments", "Projects", "Study Guides"];
+const resourceTypes = ["All Types", "Notes", "Assignments", "Projects"];
 
 interface FeedItem {
   id: string;
@@ -42,160 +43,63 @@ interface FeedItem {
   files: string[];
 }
 
+const CreateNote = dynamic(() => import('../create-note/page'));
+const CreateAssignment = dynamic(() => import('../create-assignment/page'));
+const CreateProject = dynamic(() => import('../create-project/page'));
+
 const Feed: React.FC = () => {
   const [user] = useAuthState(auth);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All Subjects");
   const [selectedType, setSelectedType] = useState("All Types");
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
-  const [newPostSubject, setNewPostSubject] = useState(subjects[1]);
-  const [newPostType, setNewPostType] = useState(resourceTypes[1]);
-  const [newPostTitle, setNewPostTitle] = useState("");
-  const [newPostDescription, setNewPostDescription] = useState("");
-  const [newPostFiles, setNewPostFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedPostType, setSelectedPostType] = useState<string | null>(null);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const posts = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as FeedItem));
-      setFeedItems(posts);
-    });
+    const fetchFeedItems = async () => {
+      if (user) {
+        try {
+          let feedQuery = query(
+            collection(db, 'posts'),
+            orderBy('createdAt', 'desc')
+          );
 
-    return () => unsubscribe();
-  }, []);
+          if (selectedSubject !== "All Subjects") {
+            feedQuery = query(feedQuery, where('subject', '==', selectedSubject));
+          }
 
-  const PreviewPost: React.FC = () => (
-    <Card className="mt-4">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Avatar>
-              <AvatarImage src={user?.photoURL || "/placeholder.svg?height=40&width=40"} alt={user?.displayName || "User"} />
-              <AvatarFallback>{user?.displayName?.[0] || "U"}</AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle>{newPostTitle || "Your Post Title"}</CardTitle>
-              <p className="text-sm text-black">by {user?.displayName || "You"}</p>
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            <Badge>{newPostSubject}</Badge>
-            <Badge variant="outline">{newPostType}</Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-black">{newPostDescription || "Your post description will appear here."}</p>
-        {newPostFiles.length > 0 && (
-          <div className="mt-4">
-            <p className="text-sm font-semibold text-black">Attached files:</p>
-            <div className="grid grid-cols-2 gap-4 mt-2">
-              {newPostFiles.map((file, index) => (
-                <div key={index} className="relative">
-                  {file.type.startsWith('image/') && (
-                    <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-40 object-cover rounded" />
-                  )}
-                  {file.type === 'application/pdf' && (
-                    <div className="w-full h-40 bg-gray-200 flex items-center justify-center rounded">
-                      <span className="text-black">PDF: {file.name}</span>
-                    </div>
-                  )}
-                  {file.type.startsWith('video/') && (
-                    <video src={URL.createObjectURL(file)} className="w-full h-40 object-cover rounded" controls />
-                  )}
-                  <button
-                    className="absolute top-1 right-1 bg-white rounded-full p-1"
-                    onClick={() => {
-                      setNewPostFiles(newPostFiles.filter((_, i) => i !== index));
-                    }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        <div className="flex space-x-4">
-          <Button variant="ghost" size="sm">
-            <ThumbsUp className="mr-2 h-4 w-4" />
-            0
-          </Button>
-          <Button variant="ghost" size="sm">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            0
-          </Button>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="ghost" size="sm">
-            <Bookmark className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm">
-            <Share2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardFooter>
-    </Card>
-  );
+          if (selectedType !== "All Types") {
+            feedQuery = query(feedQuery, where('type', '==', selectedType));
+          }
 
-  const handleCreatePost = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!user) return;
+          const querySnapshot = await getDocs(feedQuery);
+          const fetchedFeedItems = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt.toDate(),
+          } as FeedItem));
 
-    try {
-      const fileUrls = await Promise.all(newPostFiles.map(uploadFile));
+          setFeedItems(fetchedFeedItems);
+        } catch (error) {
+          console.error("Error fetching feed items:", error);
+        }
+      }
+    };
 
-      const newPost = {
-        title: newPostTitle,
-        description: newPostDescription,
-        subject: newPostSubject,
-        type: newPostType,
-        author: user.displayName || 'Anonymous',
-        authorId: user.uid,
-        avatar: user.photoURL || '/placeholder.svg?height=40&width=40',
-        likes: 0,
-        comments: 0,
-        createdAt: new Date(),
-        files: fileUrls.length > 0 ? fileUrls : [], // Initialize as empty array if no files
-      };
+    fetchFeedItems();
+  }, [user, selectedSubject, selectedType]);
 
-      await addDoc(collection(db, 'posts'), newPost);
-
-      setIsCreatePostOpen(false);
-      // Reset form fields
-      setNewPostTitle("");
-      setNewPostDescription("");
-      setNewPostFiles([]);
-      setNewPostSubject(subjects[1]);
-      setNewPostType(resourceTypes[1]);
-    } catch (error) {
-      console.error("Error creating post:", error);
-      // Show an error message to the user
-      alert("An error occurred while creating the post. Please try again.");
-    }
-  };
-
-  const uploadFile = async (file: File): Promise<string> => {
-    try {
-      const storageRef = ref(storage, `posts/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      return getDownloadURL(storageRef);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      throw error; // Re-throw the error to be caught in handleCreatePost
-    }
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setNewPostFiles(Array.from(event.target.files));
+  const renderCreatePostForm = () => {
+    switch (selectedPostType) {
+      case 'Notes':
+        return <CreateNote onClose={() => setSelectedPostType(null)} />;
+      case 'Assignments':
+        return <CreateAssignment onClose={() => setSelectedPostType(null)} />;
+      case 'Projects':
+        return <CreateProject onClose={() => setSelectedPostType(null)} />;
+      default:
+        return null;
     }
   };
 
@@ -246,118 +150,26 @@ const Feed: React.FC = () => {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-3xl font-bold">Resource Feed</h1>
-              <Dialog open={isCreatePostOpen} onOpenChange={setIsCreatePostOpen}>
+              <Dialog>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
                     Create Post
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl w-full bg-white text-black">
+                <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create a New Post</DialogTitle>
                     <DialogDescription>
-                      Share your knowledge with the EduShare community. Fill out the details below to create a new post.
+                      Choose the type of post you want to create.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="grid grid-cols-2 gap-6">
-                    <form onSubmit={handleCreatePost}>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="title" className="text-right">
-                            Title
-                          </Label>
-                          <Input
-                            id="title"
-                            value={newPostTitle}
-                            onChange={(e) => setNewPostTitle(e.target.value)}
-                            className="col-span-3"
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="description" className="text-right">
-                            Description
-                          </Label>
-                          <Textarea
-                            id="description"
-                            value={newPostDescription}
-                            onChange={(e) => setNewPostDescription(e.target.value)}
-                            className="col-span-3"
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="subject" className="text-right">
-                            Subject
-                          </Label>
-                          <Select value={newPostSubject} onValueChange={setNewPostSubject}>
-                            <SelectTrigger className="col-span-3">
-                              <SelectValue>{newPostSubject}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {subjects.slice(1).map((subject) => (
-                                <SelectItem key={subject} value={subject}>
-                                  {subject}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="type" className="text-right">
-                            Type
-                          </Label>
-                          <Select value={newPostType} onValueChange={setNewPostType}>
-                            <SelectTrigger className="col-span-3">
-                              <SelectValue>{newPostType}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {resourceTypes.slice(1).map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="files" className="text-right">
-                            Files
-                          </Label>
-                          <div className="col-span-3">
-                            <Input
-                              id="files"
-                              type="file"
-                              multiple
-                              accept="image/*,application/pdf,video/*"
-                              onChange={handleFileUpload}
-                              ref={fileInputRef}
-                              className="hidden"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => fileInputRef.current?.click()}
-                            >
-                              <Upload className="mr-2 h-4 w-4" />
-                              Upload Files
-                            </Button>
-                            {newPostFiles.length > 0 && (
-                              <p className="mt-2 text-sm text-gray-500">
-                                {newPostFiles.length} file(s) selected
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit">Create Post</Button>
-                      </DialogFooter>
-                    </form>
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2">Preview</h3>
-                      <PreviewPost />
-                    </div>
+                  <div className="flex justify-around mt-4">
+                    <Button onClick={() => setSelectedPostType('Notes')}>Notes</Button>
+                    <Button onClick={() => setSelectedPostType('Assignments')}>Assignment</Button>
+                    <Button onClick={() => setSelectedPostType('Projects')}>Project</Button>
                   </div>
+                  {renderCreatePostForm()}
                 </DialogContent>
               </Dialog>
             </div>
