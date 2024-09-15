@@ -1,28 +1,24 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from "react";
-import { Search, ThumbsUp, MessageSquare, Bookmark, Share2, Plus, Upload, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, ThumbsUp, MessageSquare, Bookmark, Share2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db, storage } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import dynamic from 'next/dynamic';
 
 const subjects = ["All Subjects", "Mathematics", "Physics", "Computer Science", "Literature", "History"];
@@ -56,7 +52,6 @@ const Feed: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All Subjects");
   const [selectedType, setSelectedType] = useState("All Types");
-  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [selectedPostType, setSelectedPostType] = useState<string | null>(null);
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
 
