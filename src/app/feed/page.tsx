@@ -43,9 +43,13 @@ interface FeedItem {
   files: string[];
 }
 
-const CreateNote = dynamic(() => import('../create-note/page'));
-const CreateAssignment = dynamic(() => import('../create-assignment/page'));
-const CreateProject = dynamic(() => import('../create-project/page'));
+interface CreateComponentProps {
+  onClose: () => void;
+}
+
+const CreateNote = dynamic<CreateComponentProps>(() => import('../create-note/page'));
+const CreateAssignment = dynamic<CreateComponentProps>(() => import('../create-assignment/page'));
+const CreateProject = dynamic<CreateComponentProps>(() => import('../create-project/page'));
 
 const Feed: React.FC = () => {
   const [user] = useAuthState(auth);
@@ -73,14 +77,17 @@ const Feed: React.FC = () => {
             feedQuery = query(feedQuery, where('type', '==', selectedType));
           }
 
-          const querySnapshot = await getDocs(feedQuery);
-          const fetchedFeedItems = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt.toDate(),
-          } as FeedItem));
+          const unsubscribe = onSnapshot(feedQuery, (snapshot) => {
+            const fetchedFeedItems = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: doc.data().createdAt.toDate(),
+            } as FeedItem));
 
-          setFeedItems(fetchedFeedItems);
+            setFeedItems(fetchedFeedItems);
+          });
+
+          return () => unsubscribe();
         } catch (error) {
           console.error("Error fetching feed items:", error);
         }
