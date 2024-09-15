@@ -25,7 +25,7 @@ export default function Contact() {
       {submitted ? (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
           <strong className="font-bold">Thank you!</strong>
-          <span className="block sm:inline"> Your message has been sent. We'll get back to you soon.</span>
+          <span className="block sm:inline"> Your message has been sent. We&apos;ll get back to you soon.</span>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
