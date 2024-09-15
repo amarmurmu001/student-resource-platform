@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
+import Image from 'next/image';
 import { Search, ThumbsUp, MessageSquare, Bookmark, Share2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -220,9 +221,16 @@ const Feed: React.FC = () => {
                                 <span className="text-black">PDF</span>
                               </div>
                             ) : file.match(/\.(mp4|webm|ogg)$/) ? (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <video src={file} className="w-full h-40 object-cover rounded" controls />
                             ) : (
-                              <img src={file} alt="Attachment" className="w-full h-40 object-cover rounded" />
+                              <Image 
+                                src={file} 
+                                alt="Attachment" 
+                                width={300} 
+                                height={160} 
+                                className="w-full h-40 object-cover rounded" 
+                              />
                             )}
                           </div>
                         ))}
