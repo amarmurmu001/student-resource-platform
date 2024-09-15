@@ -1,18 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuthState } from 'react-firebase-hooks/auth';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import { auth, db, googleProvider } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
-export default function Signup() {
+const SignupPage = () => {
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
+
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/feed');
+    }
+  }, [user, loading, router]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +32,26 @@ export default function Signup() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
-      router.push('/resources');
+      
+      // Create user profile in Firestore
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        uid: userCredential.user.uid,
+        name: name,
+        username: email.split('@')[0], // You might want to let users choose their username
+        email: email,
+        avatar: userCredential.user.photoURL || '/default-avatar.png',
+        bio: '',
+        stats: {
+          resources: 0,
+          followers: 0,
+          following: 0,
+        },
+      });
+
+      router.push('/feed');
     } catch (error) {
       setError('Failed to create an account.');
+      console.error(error);
     }
   };
 
@@ -33,14 +59,41 @@ export default function Signup() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+      const displayName = user.displayName || name || user.email?.split('@')[0] || 'User';
+      
       if (!user.displayName) {
-        await updateProfile(user, { displayName: name || user.email?.split('@')[0] });
+        await updateProfile(user, { displayName: displayName });
       }
-      router.push('/resources');
+
+      // Create or update user profile in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        name: displayName,
+        username: user.email?.split('@')[0] || 'user',
+        email: user.email,
+        avatar: user.photoURL || '/default-avatar.png',
+        bio: '',
+        stats: {
+          resources: 0,
+          followers: 0,
+          following: 0,
+        },
+      }, { merge: true });
+
+      router.push('/feed');
     } catch (error) {
       setError('Failed to sign up with Google.');
+      console.error(error);
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="max-w-md mx-auto px-4 py-12">
@@ -103,4 +156,6 @@ export default function Signup() {
       </p>
     </div>
   );
-}
+};
+
+export default SignupPage;

@@ -1,22 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { signInWithEmailAndPassword, signInWithPopup, User } from 'firebase/auth';
+import { auth, googleProvider, db } from '@/lib/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
-export default function Login() {
+const LoginPage = () => {
+  const [user, loading] = useAuthState(auth);
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
+
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/feed');
+    }
+  }, [user, loading, router]);
+
+  const createUserProfileIfNotExists = async (user: User) => {
+    const userDocRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        name: user.displayName || 'User',
+        username: user.email?.split('@')[0] || 'user',
+        email: user.email,
+        avatar: user.photoURL || '/default-avatar.png',
+        bio: '',
+        stats: {
+          resources: 0,
+          followers: 0,
+          following: 0,
+        },
+      });
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/resources');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await createUserProfileIfNotExists(userCredential.user);
+      router.push('/feed');
     } catch (error) {
       setError('Failed to log in. Please check your credentials.');
     }
@@ -24,12 +54,21 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-      router.push('/resources');
+      const result = await signInWithPopup(auth, googleProvider);
+      await createUserProfileIfNotExists(result.user);
+      router.push('/feed');
     } catch (error) {
       setError('Failed to log in with Google.');
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="max-w-md mx-auto px-4 py-12">
@@ -70,4 +109,6 @@ export default function Login() {
       </p>
     </div>
   );
-}
+};
+
+export default LoginPage;

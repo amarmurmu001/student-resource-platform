@@ -41,13 +41,13 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="flex items-center">
-              <Image
+              {/* <Image
                 src="/logo.svg"
                 alt="Logo"
                 width={32}
                 height={32}
                 className="mr-2"
-              />
+              /> */}
               <span className="text-xl font-bold text-gray-900 dark:text-white">StudyShare</span>
             </Link>
           </div>
@@ -79,7 +79,7 @@ const Navbar: React.FC = () => {
                     </button>
                   </div>
                   {isDropdownOpen && (
-                    <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg">
+                    <div className="origin-top-right  z-10 absolute right-0 mt-2 w-48 rounded-md shadow-lg">
                       <div className="py-1 rounded-md bg-white dark:bg-gray-800 shadow-xs">
                         <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</Link>
                         <button onClick={toggleTheme} className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
