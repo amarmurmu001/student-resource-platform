@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { BookOpen, Search, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Image from 'next/image'
 
 export default function Home() {
   return (

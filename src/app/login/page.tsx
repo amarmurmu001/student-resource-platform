@@ -104,8 +104,8 @@ const LoginPage = () => {
       <button onClick={handleGoogleLogin} className="w-full mt-4 bg-red-600 text-white py-2 rounded-md hover:bg-red-700 transition duration-300">
         Login with Google
       </button>
-      <p className="mt-4 text-center">
-        Don't have an account? <Link href="/signup" className="text-blue-600 hover:underline">Sign up</Link>
+      <p className="text-sm text-muted-foreground">
+        Don&apos;t have an account? <Link href="/signup">Sign up</Link>
       </p>
     </div>
   );

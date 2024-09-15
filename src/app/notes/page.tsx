@@ -5,10 +5,10 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Bookmark, MessageSquare, Share2, ThumbsUp, Image as ImageIcon, Video } from "lucide-react";
+import { Bookmark, MessageSquare, Share2, ThumbsUp } from "lucide-react";
 
 interface Note {
   id: string;
